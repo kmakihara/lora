@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+  <head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title> Data Scraping | CS 109a Final Project</title>
+<meta name="description" content="">
+<meta name="keywords" content="">
+<link rel="stylesheet" href="/lora/css/main.css">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="theme-color" content="#2ecc71">
+<link rel="canonical" href="/lora/scrape/">
+<link rel="alternate" type="application/rss+xml" title="CS 109a Final Project" href="/lora/feed.xml" />
+<script src=”//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js”></script>
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount', '']);
+_gaq.push(['_trackPageview']);
+(function() {
+  var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+  ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+  </head>
+  <body class="page">
+    <main class="container">
+        <header class="site-header">
+  <div class="container txt-center">
+    <nav class="navbar">
+      <ul>
+        <li><a href="/lora/">Background</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/scrape">Data Scraping</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/eda">EDA</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/models">Models</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/conclusions">Conclusions</a></li>
+      </ul>
+    </nav>
+    <hr class="hr">
+  </div>
+</header>
+        <section class="main-content">
+          <article class="post">
+  <header class="post-header">
+    <h1 class="post-title">Data Scraping</h1>
+    <p class="post-meta"></p>
+  </header>
+  <div class="post-content">
+    <h2 class="no_toc" id="contents">Contents</h2>
+<ul id="markdown-toc">
+  <li><a href="#data-sources" id="markdown-toc-data-sources">1 Data Sources</a>    <ul>
+      <li><a href="#data-collection" id="markdown-toc-data-collection">1.1 Data Collection</a></li>
+      <li><a href="#additional-data-collection-from-atf" id="markdown-toc-additional-data-collection-from-atf">1.2 Additional Data Collection from ATF</a></li>
+    </ul>
+  </li>
+</ul>
+<p><br /><br /></p>
+<h2 id="data-sources">1 Data Sources</h2>
+<h3 id="data-collection">1.1 Data Collection</h3>
+<p>The two datasets we used are from FBI and Census and are both continuous on a per annum basis. The data is not extremely difficult to deal with, though it does require some cleaning and conversion. Data from the FBI database is downloaded in XLS format, which is then parsed into a CSV file. The CSV file is then cleaned to only keep relevant bits of information, specifically the murder counts.</p>
+<p>The Census data is downloaded in a big CSV file form. This information is cleaner and more standardized, since it is already in CSV format. However, there are still issues of missing values here and there. When combining each dataframe into a single joint one, we use an inner join on the MSA’s present in each dataset. This is because each data set is only as useful as the other data set. This also means we need to be extra stringent when it comes to parsing the MSA names, so we don’t lose too much data. Whenever there is a NaN value, we either drop it or set it to 0, depending on the situation. If it is a percentage category, then we set it to 0, since there are likely other categories with positive percentages. However, instead of forcing those missing values to 0, we are also considering substituting missing values with the imputed mean.</p>
+<p>This data is cleaned, but only in a cursory fashion to perform EDA. In order to most efficiently use these dataframes, we decided to filter superfluous columns from the joined table that represented margins of error or repetitive census data. As we venture into training our model, we will also incorporate state-level data from the Bureau of Alcohol Tobacco and Firearms (ATF) to enhance our prediction model.</p>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">fbi_data_path</span> <span class="o">=</span> <span class="s">&#39;Crime/data/fbi_data/&#39;</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">xls_to_csv</span><span class="p">(</span><span class="n">wb</span><span class="p">,</span> <span class="n">csv_name</span><span class="p">):</span>
+    <span class="n">wb</span> <span class="o">=</span> <span class="n">xlrd</span><span class="o">.</span><span class="n">open_workbook</span><span class="p">(</span><span class="n">wb</span><span class="p">)</span>
+    <span class="n">sh</span> <span class="o">=</span> <span class="n">wb</span><span class="o">.</span><span class="n">sheet_by_index</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">output_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;{}.csv&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">csv_name</span><span class="p">),</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">wr</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_ALL</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">rownum</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sh</span><span class="o">.</span><span class="n">nrows</span><span class="p">):</span>
+        <span class="n">wr</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">sh</span><span class="o">.</span><span class="n">row_values</span><span class="p">(</span><span class="n">rownum</span><span class="p">))</span>
+    <span class="n">output_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_crime_stats</span><span class="p">(</span><span class="n">df_path</span><span class="p">):</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">df_path</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&#39;Metropolitan Statistical Area&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s">&#39;Metropolitan Statistical Area&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s">&#39;ffill&#39;</span><span class="p">)</span>
+    <span class="n">crime_stats</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s">&#39;Counties/principal cities&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;Total area actually reporting&#39;</span><span class="p">]</span>
+    <span class="n">crime_stats</span> <span class="o">=</span> <span class="n">crime_stats</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s">&#39;Counties/principal cities&#39;</span><span class="p">,</span> <span class="s">&#39;Population&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">()),</span> <span class="n">crime_stats</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">crime_stats</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span>
+    <span class="n">crime_stats</span><span class="p">[</span><span class="s">&#39;Metropolitan_Statistical_Area&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">crime_stats</span><span class="p">[</span><span class="s">&#39;Metropolitan_Statistical_Area&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;M.S.A&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">crime_stats</span><span class="p">[</span><span class="s">&#39;Metropolitan_Statistical_Area&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s">&#39;M.D&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
+    <span class="n">crime_stats</span> <span class="o">=</span> <span class="n">crime_stats</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">crime_stats</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">crime_stats</span><span class="p">[[</span><span class="s">&#39;Metropolitan_Statistical_Area&#39;</span><span class="p">,</span> <span class="s">&#39;Murder_and_nonnegligent_manslaughter&#39;</span><span class="p">]])</span>
+    <span class="k">return</span> <span class="n">crime_stats</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">fbi_filepaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="n">fbi_data_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">fbi_data_path</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fbi_filepaths</span><span class="p">:</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">fbi_data_path</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="s">&#39;csvs/{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">xls_to_csv</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">csv_filepaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="s">&#39;csvs/&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;csvs/&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;csvs/&#39;</span><span class="p">,</span> <span class="n">csv_filepaths</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">csv_filepaths</span><span class="p">:</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="s">&#39;csvs/&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">get_crime_stats</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s">&#39;Unnamed&#39;</span> <span class="ow">in</span> <span class="n">col</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s">&#39;csvs/{}.csv&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]),</span> <span class="n">index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span></code></pre></div>
+<h3 id="additional-data-collection-from-atf">1.2 Additional Data Collection from ATF</h3>
+<p>The state-level data from the Bureau of Alcohol Tobacco and Firearms (ATF) needs to first be converted from XLS to CSV format and then transformed into indexable columns to match the appropriate MSA areas in our merged dataframe.</p>
+<p>Since the ATF XLS files are matrices of the yearly count of recovered number of illegal firearms on a per state basis, the horizontal sum of rows represent the total count of illegal weapons originating from the respective state and the vertical sum of columns represent the total count of recovered firearms. However, since our merged dataframe from FBI and Census data uses abbreviated state labels while the ATF data uses the full string values of the states’ names, we did a final transformation of each ATF yearly data into three columns: State, Total Sourced, and Total Recovered.</p>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">atf_data_path</span> <span class="o">=</span> <span class="s">&#39;Crime/data/atf_data/&#39;</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">atf_filepaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="n">atf_data_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">atf_data_path</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">atf_filepaths</span><span class="p">:</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">atf_data_path</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="s">&#39;atf_csvs/{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="o">-</span><span class="mi">9</span><span class="p">:</span><span class="o">-</span><span class="mi">5</span><span class="p">])</span>
+    <span class="n">xls_to_csv</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">atf_csvs</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="s">&#39;atf_csvs&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;atf_csvs&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">atf_csvs</span><span class="p">:</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="s">&#39;atf_csvs&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="s">&#39;atf_csvs/{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">col_one</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">col_two</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">col_one</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">col_two</span><span class="p">:</span> <span class="s">&#39;Source State&#39;</span><span class="p">})</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+    <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">())</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">states</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">[</span><span class="s">&#39;Arizona&#39;</span><span class="p">,</span> <span class="s">&#39;AZ&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Alabama&#39;</span><span class="p">,</span> <span class="s">&#39;AL&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Alaska&#39;</span><span class="p">,</span> <span class="s">&#39;AK&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Arkansas&#39;</span><span class="p">,</span> <span class="s">&#39;AR&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;California&#39;</span><span class="p">,</span> <span class="s">&#39;CA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Colorado&#39;</span><span class="p">,</span> <span class="s">&#39;CO&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Connecticut&#39;</span><span class="p">,</span> <span class="s">&#39;CT&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Delaware&#39;</span><span class="p">,</span> <span class="s">&#39;DE&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Florida&#39;</span><span class="p">,</span> <span class="s">&#39;FL&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Georgia&#39;</span><span class="p">,</span> <span class="s">&#39;GA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Hawaii&#39;</span><span class="p">,</span> <span class="s">&#39;HI&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Idaho&#39;</span><span class="p">,</span> <span class="s">&#39;ID&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Illinois&#39;</span><span class="p">,</span> <span class="s">&#39;IL&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Indiana&#39;</span><span class="p">,</span> <span class="s">&#39;IN&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Iowa&#39;</span><span class="p">,</span> <span class="s">&#39;IA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Kansas&#39;</span><span class="p">,</span> <span class="s">&#39;KS&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Kentucky&#39;</span><span class="p">,</span> <span class="s">&#39;KY&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Louisiana&#39;</span><span class="p">,</span> <span class="s">&#39;LA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Maine&#39;</span><span class="p">,</span> <span class="s">&#39;ME&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Maryland&#39;</span><span class="p">,</span> <span class="s">&#39;MD&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Massachusetts&#39;</span><span class="p">,</span> <span class="s">&#39;MA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Michigan&#39;</span><span class="p">,</span> <span class="s">&#39;MI&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Minnesota&#39;</span><span class="p">,</span> <span class="s">&#39;MN&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Mississippi&#39;</span><span class="p">,</span> <span class="s">&#39;MS&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Missouri&#39;</span><span class="p">,</span> <span class="s">&#39;MO&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Montana&#39;</span><span class="p">,</span> <span class="s">&#39;MT&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Nebraska&#39;</span><span class="p">,</span> <span class="s">&#39;NE&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Nevada&#39;</span><span class="p">,</span> <span class="s">&#39;NV&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;New Hampshire&#39;</span><span class="p">,</span> <span class="s">&#39;NH&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;New Jersey&#39;</span><span class="p">,</span> <span class="s">&#39;NJ&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;New Mexico&#39;</span><span class="p">,</span> <span class="s">&#39;NM&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;New York&#39;</span><span class="p">,</span> <span class="s">&#39;NY&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;North Carolina&#39;</span><span class="p">,</span> <span class="s">&#39;NC&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;North Dakota&#39;</span><span class="p">,</span> <span class="s">&#39;ND&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Ohio&#39;</span><span class="p">,</span> <span class="s">&#39;OH&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Oklahoma&#39;</span><span class="p">,</span> <span class="s">&#39;OK&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Oregon&#39;</span><span class="p">,</span> <span class="s">&#39;OR&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Pennsylvania&#39;</span><span class="p">,</span> <span class="s">&#39;PA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Rhode Island&#39;</span><span class="p">,</span> <span class="s">&#39;RI&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;South Carolina&#39;</span><span class="p">,</span> <span class="s">&#39;SC&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;South Dakota&#39;</span><span class="p">,</span> <span class="s">&#39;SD&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Tennessee&#39;</span><span class="p">,</span> <span class="s">&#39;TN&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Texas&#39;</span><span class="p">,</span> <span class="s">&#39;TX&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Utah&#39;</span><span class="p">,</span> <span class="s">&#39;UT&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Vermont&#39;</span><span class="p">,</span> <span class="s">&#39;VT&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Virginia&#39;</span><span class="p">,</span> <span class="s">&#39;VA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Washington&#39;</span><span class="p">,</span> <span class="s">&#39;WA&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;West Virginia&#39;</span><span class="p">,</span> <span class="s">&#39;WV&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Wisconsin&#39;</span><span class="p">,</span> <span class="s">&#39;WI&#39;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&#39;Wyoming&#39;</span><span class="p">,</span> <span class="s">&#39;WY&#39;</span><span class="p">],</span>
+        <span class="p">]</span>
+<span class="n">states</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">states</span><span class="p">))</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">states</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="s">&#39;district of columbia&#39;</span><span class="p">,</span> <span class="s">&#39;DC&#39;</span><span class="p">])</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">abbreviate</span><span class="p">(</span><span class="n">state_name</span><span class="p">,</span> <span class="n">state_list</span><span class="o">=</span><span class="n">states</span><span class="p">):</span>
+    <span class="n">lowercase</span> <span class="o">=</span> <span class="n">state_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">abbreviation</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">state_list</span> <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">lowercase</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">abbreviation</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">abbreviation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">state_name</span></code></pre></div>
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">cleaned_frames</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frames</span><span class="p">):</span>
+    <span class="n">df_left</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s">&#39;Source State&#39;</span><span class="p">])</span>
+    <span class="n">source_totals</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">df_left</span><span class="p">[</span><span class="s">&#39;Total Sourced&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="n">source_totals</span><span class="p">]</span>
+    <span class="n">recovery_totals</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s">&#39;Source State&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">df_right</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="n">frame</span><span class="p">[</span><span class="s">&#39;Source State&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">recovery_totals</span><span class="p">]</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df_left</span><span class="p">,</span> <span class="n">df_right</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s">&#39;Source State&#39;</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;State&#39;</span><span class="p">,</span> <span class="s">&#39;Total Sourced&#39;</span><span class="p">,</span> <span class="s">&#39;Total Recovered&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">cols</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&#39;State&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s">&#39;State&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">abbreviate</span><span class="p">,</span> <span class="n">state_list</span><span class="o">=</span><span class="n">states</span><span class="p">)</span>
+    <span class="n">cleaned_frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;atf_csvs&#39;</span><span class="p">,</span> <span class="n">atf_csvs</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">index</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span></code></pre></div>
+  </div>
+</article>
+        </section>
+<div class="clearfix"></div>
+<footer class="site-footer txt-center">
+  <hr>
+  <ul class="social">
+  </ul>
+  <small>&copy; 2017 All rights reserved. Made with <a href="http://jekyllrb.com" target="_blank">Jekyll</a> and <i class="icon icon-heart"></i></small>
+  <small>by <a href="http://nandomoreira.me" target="_blank">nandomoreira.me</a></small>
+</footer>
+    </main>
+    <a href="" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#2ecc71; color:#f7f8f9; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+  </body>
+</html>

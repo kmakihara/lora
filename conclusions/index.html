@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title> Conclusions | CS 109a Final Project</title>
+<meta name="description" content="">
+<meta name="keywords" content="">
+<link rel="stylesheet" href="/lora/css/main.css">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="theme-color" content="#2ecc71">
+<link rel="canonical" href="/lora/conclusions/">
+<link rel="alternate" type="application/rss+xml" title="CS 109a Final Project" href="/lora/feed.xml" />
+<script src=”//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js”></script>
+<script type="text/javascript">
+var _gaq = _gaq || [];
+_gaq.push(['_setAccount', '']);
+_gaq.push(['_trackPageview']);
+(function() {
+  var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+  ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+</script>
+  </head>
+  <body class="page">
+    <main class="container">
+        <header class="site-header">
+  <div class="container txt-center">
+    <nav class="navbar">
+      <ul>
+        <li><a href="/lora/">Background</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/scrape">Data Scraping</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/eda">EDA</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/models">Models</a></li>
+        <li class="divider">&bull;</li>
+        <li><a href="/lora/conclusions">Conclusions</a></li>
+      </ul>
+    </nav>
+    <hr class="hr">
+  </div>
+</header>
+        <section class="main-content">
+          <article class="post">
+  <header class="post-header">
+    <h1 class="post-title">Conclusions</h1>
+    <p class="post-meta"></p>
+  </header>
+  <div class="post-content">
+    <p>Our experience with this project has shown that in almost all cases, KNN regressor is the best model. Indeed, our best model after many attempts at building a linear and polynomial regression was still KNN, with a R^2 of 0.51. There’s something comfortingly simple in this results: the best way to predict a result is just to take an average of similar results!</p>
+<p>The bulk of our struggles with this model was data acquisition and data cleaning. There is more data available at a state level, but MSA level data was really only available on the census website and through the FBI. MSA’s are also redrawn every few years, so the data keys are not time independent. Even though the R^2 of 0.51 is fairly impressive, this still leaves 49% unexplained variability. One potential improvement would be in our method of imputation for missing values. Many fields were missing in the census data, and we simply imputed using the mean. Perhaps running a simple linear regressor on that each column to impute data would improve the results. Our models before and after mean imputation improved markedly, it is very possible that they would further improve by better imputation.</p>
+<p>Consistently, the most significant census predictors were population, percentage of population that is African American, and education levels, as well as the ATF data on firearm sourcing and recovery. Surprisingly, income and poverty levels were not statistically significant. However, this is consistent with the ASU paper we discussed in the literature review, and is definitely an area for further research.</p>
+<p>It was troubling to find the positive correlation between percentage of population that is African American and murder rates, but we must remember that correlation does not imply causation. This would be an area for more in-depth research. Perhaps looking at areas with high African American population and low murder rates, and comparing those against areas with higher murder rates. Adding additional predictors could also make the model more robust. We mentioned the proxy for firearm ownership in the literature review. Some other interesting datasets could be the Brady Campaign Report, police presence, education quality, and many more.</p>
+<p>This project was both fulfilling and troubling. There is a lot of noise floating around about what causes the US to have such high homicide rates. It looks like education is one of the best ways to lower the homicide rate, while increasing income may not be as significant as people expected. It was rewarding to know that data analysis of this specific level (homicides in MSA) hasn’t been done, and that the results we found were statistically significant. We are planning to continue this work over winter break to see if we can add to the predictive ability of our model.</p>
+<h3 id="bibliography">Bibliography</h3>
+<p>“Firearms Trace Data.” Data &amp; Statistics, Bureau of Alcohol, Tobacco, Firearms and Explosives,
+https://www.atf.gov/resource-center/data-statistics.</p>
+<p>Low-Income Geographic Area Law and Legal Definition, USLegal, Inc.,
+https://definitions.uslegal.com/l/low-income-geographic-area/.</p>
+<p>Siegel, Michael, et al. “The Relationship Between Gun Ownership and Firearm Homicide Rates in the United States,
+1981–2010.” American Journal of Public Health, American Public Health Association, Nov. 2013, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3828709/.</p>
+<p>Watt, Tanya, and Chung-Chen Lee. “Making Your State Safer: Factors Influencing Interstate Homicide Rates in the
+United States.” Arizona State University, 2007, https://www.asu.edu/mpa/Interstate%20Homicide.pdf.</p>
+  </div>
+</article>
+        </section>
+<div class="clearfix"></div>
+<footer class="site-footer txt-center">
+  <hr>
+  <ul class="social">
+  </ul>
+  <small>&copy; 2017 All rights reserved. Made with <a href="http://jekyllrb.com" target="_blank">Jekyll</a> and <i class="icon icon-heart"></i></small>
+  <small>by <a href="http://nandomoreira.me" target="_blank">nandomoreira.me</a></small>
+</footer>
+    </main>
+    <a href="" target="_blank" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#2ecc71; color:#f7f8f9; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+  </body>
+</html>
